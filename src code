@@ -1,0 +1,102 @@
+import yt_dlp
+from validator_collection import validators, errors
+import re
+import os
+import tkinter as tk
+from tkinter import ttk
+import threading
+import sys
+import subprocess
+
+def get_ffmpeg_path():
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(__file__)
+    return os.path.join(base_pa, "ffmpeg", "ffmpeg.exe")
+
+ffmpeg_path = get_ffmpeg_path()
+th
+# Check it works
+result = subprocess.run([ffmpeg_path, "-version"], capture_output=True, text=True)
+print(result.stdout)
+
+
+def progress_hook(d):
+    status_label.config(text = "Progress Bar")
+    if d['status'] == 'downloading':
+        total = d.get('total_bytes') or d.get('total_bytes_estimate')
+        downloaded = d.get('downloaded_bytes', 0)
+        if total:
+            percent = int(downloaded / total * 100)
+            progress['value'] = percent
+            status_label.config(text=f"⬇ Downloading... {percent}%")
+            root.update_idletasks()
+    elif d['status'] == 'finished':
+        progress['value'] = 100
+        status_label.config(text="🔄 Converting to MP3...")
+        root.update_idletasks()
+
+def run_download():
+    url = entry.get().strip()
+
+    youtube_regex = re.compile(
+        r"^https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[&?][^\s]*)?$"
+    )
+
+    ydl_opts = {
+        'ffmpeg_location': ffmpeg_path,
+        'format': 'bestaudio/best',
+        'outtmpl': '%(title)s.%(ext)s',
+        'progress_hooks': [progress_hook],
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': '192',
+        }],
+    }
+
+    try:
+        match = youtube_regex.match(url)
+        if match:
+            status_label.config(text="🔄 Starting download...", fg="blue")
+            progress['value'] = 0
+            root.update_idletasks()
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            status_label.config(text="✅ Download complete !\n Put another URL !!", fg="green")
+            entry.delete(0,tk.END)
+        else:
+            status_label.config(text="❌ Invalid URL. Please enter a full YouTube link.", fg="red")
+    except Exception as e:
+        status_label.config(text=f"❌ Download failed: {e}", fg="red")
+
+def download_audio():
+    thread = threading.Thread(target=run_download)
+    thread.start()
+
+
+
+
+
+root = tk.Tk()
+root.resizable(False, False) 
+root.geometry('500x550')
+root.title("YouTube-mp3 Converter")
+label = tk.Label(root,text = "YouTube to mp3 converter", font = ('Arial',20))
+label.pack(pady = 20)
+refer_label = tk.Label(root, text= "Put URL here ⏬", font = ("Arial", 20))
+refer_label.pack()
+entry = tk.Entry(root, bg = "red", width = "70")
+entry.pack(pady = 20)
+btn1 = tk.Button(root, text = "Download", bg="#32bd28", width = 20, command = download_audio )
+btn1.pack(pady = 10)
+progress = ttk.Progressbar(root, orient='horizontal', length=400, mode='determinate')
+progress.pack(pady=10)
+label2 = tk.Label(root,font = ("Arial", 14), text = " 🎧 How It Works")
+label2.pack(pady = 20 )
+label3 = tk.Label(root,font = ("Arial", 12), anchor = "w",justify = "left", text = "1/ Paste the YouTube Link 🔗\n Copy a full YouTube video link and paste it into the app.\n2/ Download & Convert 🔽 \n The app will download the audio and convert it to an MP3\n file automatically.\n3/ Find Your File 📁\n The MP3 will be saved in the same folder as the\n app, using the video’s title as the file name.")
+label3.pack(pady = 10)
+status_label = tk.Label(root, text="", font=('Arial', 12), fg="green")
+status_label.pack(pady=5)
+root.mainloop()
